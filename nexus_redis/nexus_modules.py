@@ -9,7 +9,7 @@ from nexus_redis.helpers import get_net_loc
 class RedisModule(nexus.NexusModule):
     home_url = 'index'
     name = 'redis'
-    
+
     def get_caches(self):
         caches = {}
         for config in conf.CONNECTIONS:
@@ -26,7 +26,7 @@ class RedisModule(nexus.NexusModule):
             except Exception, e:
                 self.logger.exception(e)
         return caches
-    
+
     def get_stats(self, timeout=5):
         default_timeout = socket.getdefaulttimeout()
         socket.setdefaulttimeout(timeout)
@@ -45,23 +45,26 @@ class RedisModule(nexus.NexusModule):
         socket.setdefaulttimeout(default_timeout)
 
         return results
-    
+
     def get_title(self):
         return 'Redis'
-    
+
     def get_urls(self):
-        from django.conf.urls.defaults import patterns, url
+        try:
+            from django.conf.urls import patterns, url
+        except ImportError:  # Django<=1.4
+            from django.conf.urls.defaults import patterns, url
 
         urlpatterns = patterns('',
             url(r'^$', self.as_view(self.index), name='index'),
             url(r'^by-server/$', self.as_view(self.by_server), name='by-server'),
         )
-        
+
         return urlpatterns
-    
+
     def render_on_dashboard(self, request):
         cache_stats = self.get_stats()
-         
+
         global_stats = {
             'expired_keys': 0,
             'total_commands_processed': 0,
@@ -83,7 +86,7 @@ class RedisModule(nexus.NexusModule):
         return self.render_to_string('nexus/redis/dashboard.html', {
             'global_stats': global_stats,
         })
-    
+
     def index(self, request):
         return self.render_to_response("nexus/redis/index.html", {
             'cache_stats': self.get_stats(),
@@ -110,10 +113,10 @@ class RedisModule(nexus.NexusModule):
                 server_stats[hostname]['keyspace_commands'] = server_stats[hostname]['keyspace_hits'] + server_stats[hostname]['keyspace_misses']
 
             host_info = (netloc, stats['online'])
-            
+
             if host_info in server_stats[hostname]['servers']:
                 continue
-            
+
             for k in global_stats.iterkeys():
                 server_stats[hostname][k] += float(stats.get(k, 0))
 
